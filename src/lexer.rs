@@ -64,6 +64,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                                 chars.next(); // 跳过注释内容
                             }
                         }
+                    } else {
+                        panic!("未知字符: /{}", next_char);
                     }
                 }
             }
