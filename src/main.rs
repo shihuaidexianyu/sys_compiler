@@ -97,23 +97,97 @@ fn lex(input: &str) -> Vec<Token> {
                 });
                 chars.next();
             }
+            /*
+            integer-const       ::= decimal-const
+                                  | octal-const
+                                  | hexadecimal-const;
+            decimal-const       ::= nonzero-digit
+                                  | decimal-const digit;
+            octal-const         ::= "0"
+                                  | octal-const octal-digit;
+            hexadecimal-const   ::= hexadecimal-prefix hexadecimal-digit
+                                  | hexadecimal-const hexadecimal-digit;
+            hexadecimal-prefix  ::= "0x" | "0X";
+             */
             '0'..='9' => {
-                // 处理数字，数字可能有多位，所以需要循环读取
-                let mut num_str = String::new();
-                while let Some(&digit) = chars.peek() {
-                    if digit.is_digit(10) {
-                        num_str.push(digit);
-                        chars.next();
-                    } else {
-                        break;
+                // 外层 peek 到的 c 就是首字符(还没消费),直接按它分派
+                match c {
+                    '0' => {
+                        // 处理以 0 开头的数字,可能是八进制或十六进制
+                        chars.next(); // 跳过 '0'
+                        if let Some(&next_char) = chars.peek() {
+                            match next_char {
+                                'x' | 'X' => {
+                                    // 十六进制
+                                    chars.next(); // 跳过 'x' 或 'X'
+                                    let mut hex_str = String::new();
+                                    while let Some(&ch) = chars.peek() {
+                                        if ch.is_ascii_hexdigit() {
+                                            hex_str.push(ch);
+                                            chars.next();
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    let value = i32::from_str_radix(&hex_str, 16)
+                                        .expect("无效的十六进制数");
+                                    tokens.push(Token {
+                                        kind: TokenKind::Number(value),
+                                        text: format!("0x{}", hex_str),
+                                    });
+                                }
+                                '0'..='7' => {
+                                    // 八进制
+                                    let mut octal_str = String::from("0");
+                                    while let Some(&ch) = chars.peek() {
+                                        if ch >= '0' && ch <= '7' {
+                                            octal_str.push(ch);
+                                            chars.next();
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    let value =
+                                        i32::from_str_radix(&octal_str, 8).expect("无效的八进制数");
+                                    tokens.push(Token {
+                                        kind: TokenKind::Number(value),
+                                        text: octal_str,
+                                    });
+                                }
+                                _ => {
+                                    // 单独的 0
+                                    tokens.push(Token {
+                                        kind: TokenKind::Number(0),
+                                        text: "0".to_string(),
+                                    });
+                                }
+                            }
+                        } else {
+                            // 单独的 0
+                            tokens.push(Token {
+                                kind: TokenKind::Number(0),
+                                text: "0".to_string(),
+                            });
+                        }
+                    }
+                    _ => {
+                        // c 只可能是 '1'..='9'(外层分支已排除 '0'):十进制数
+                        let mut decimal_str = String::new();
+                        while let Some(&ch) = chars.peek() {
+                            if ch >= '0' && ch <= '9' {
+                                decimal_str.push(ch);
+                                chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+                        let value = i32::from_str_radix(&decimal_str, 10).expect("无效的十进制数");
+                        tokens.push(Token {
+                            kind: TokenKind::Number(value),
+                            text: decimal_str,
+                        });
                     }
                 }
-                // 转换字符串为整数
-                let value = num_str.parse::<i32>().unwrap();
-                tokens.push(Token {
-                    kind: TokenKind::Number(value),
-                    text: num_str,
-                });
             }
             // 处理标识符和关键字
             // 1. 先得出来整个标识符的字符串
@@ -124,9 +198,11 @@ fn lex(input: &str) -> Vec<Token> {
                    | identifier digit;
             */
             'a'..='z' | 'A'..='Z' | '_' => {
+                // 不能由数字开头,所以这里不处理数字
                 let mut ident_str = String::new();
                 while let Some(&ch) = chars.peek() {
-                    if ch.is_alphanumeric() || ch == '_' {
+                    // 除了第一个字符外，其余字符可以由字母、数字和下划线组成
+                    if ch.is_ascii_alphanumeric() || ch == '_' {
                         ident_str.push(ch);
                         chars.next();
                     } else {
@@ -149,6 +225,14 @@ fn lex(input: &str) -> Vec<Token> {
         }
     }
     tokens
+}
+
+fn parse(tokens: &[Token]) {
+    // 语法分析器: 将 token 序列解析成抽象语法树(AST)
+    // 这里我们只做一个简单的示例，打印出 token 的种类和文本
+    for token in tokens {
+        println!("{:?}: {}", token.kind, token.text);
+    }
 }
 
 fn main() {
