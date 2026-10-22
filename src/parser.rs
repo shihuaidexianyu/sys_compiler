@@ -86,5 +86,14 @@ pub fn parse(tokens: &[Token]) -> CompUnit {
     // 用 tokens 初始化 parser, pos 从 0 开始
     let mut parser = Parser { tokens, pos: 0 };
     // 此函数会一层一层调用 parser 的方法,最终返回 CompUnit
-    parser.comp_unit()
+    let comp_unit = parser.comp_unit();
+    // 整个编译单元解析完后,游标必须正好停在 token 流末尾;
+    // 否则说明有 parser 不认识的残余 token —— 语法错误
+    if parser.pos != tokens.len() {
+        panic!(
+            "解析结束后仍有未消费的 token, 第一个是: {:?}",
+            tokens[parser.pos]
+        );
+    }
+    comp_unit
 }
