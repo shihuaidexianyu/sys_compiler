@@ -33,7 +33,7 @@ pub fn lex(input: &str) -> Vec<Token> {
         match c {
             // 空白字符
             // grammar: | 是「或」模式,其中任意一个匹配都算数
-            ' ' | '\n' | '\t' => {
+            c if c.is_ascii_whitespace() => {
                 chars.next();
             }
             // 单行和多行注释
