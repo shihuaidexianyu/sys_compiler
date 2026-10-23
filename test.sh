@@ -1,1 +1,2 @@
 docker run -it --rm -v ~/course/compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv1 /root/compiler
+docker run -it --rm -v ~/course/compiler:/root/compiler maxxing/compiler-dev autotest -riscv -s lv1 /root/compiler
