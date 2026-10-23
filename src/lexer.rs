@@ -33,6 +33,7 @@ pub fn lex(input: &str) -> Vec<Token> {
         match c {
             // 空白字符
             // grammar: | 是「或」模式,其中任意一个匹配都算数
+            // fix: 之前的错误是只匹配了' ' | '\n' | '\t',但是还有 '\r' 也算空白字符,所以要加上, 还有一个 '\x0C' 也算空白字符,但是都可以被 is_ascii_whitespace() 处理,所以直接用这个方法就行
             c if c.is_ascii_whitespace() => {
                 chars.next();
             }
