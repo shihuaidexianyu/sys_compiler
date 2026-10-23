@@ -20,7 +20,17 @@ pub fn gen_riscv(s: &str) -> String {
                     }
                     ValueKind::Return(ret) => {
                         // 处理 ret 指令
-                        riscv_code.push_str("    ret\n");
+                        match ret.value() {
+                            Some(value) => {
+                                let value_data = func_data.dfg().value(value);
+                                if let ValueKind::Integer(int) = value_data.kind() {
+                                    riscv_code.push_str(&format!("    ret {}\n", int.value()));
+                                }
+                            }
+                            None => {
+                                riscv_code.push_str("    ret\n");
+                            }
+                        }
                     }
                     // 其他种类暂时遇不到
                     _ => unreachable!(),
