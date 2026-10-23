@@ -7,7 +7,7 @@ pub fn gen_riscv(s: &str) -> String {
     for &func in program.func_layout() {
         let func_data = program.func(func);
         riscv_code.push_str(".text\n");
-        // fix: koopa IR 中函数名是以 @ 开头的, 需要去掉
+        // tip: koopa 的 name() 带前缀(@main), @ 在 RISC-V 汇编里是注释符, 必须剥掉
         let name = func_data.name().trim_start_matches('@');
         riscv_code.push_str(&format!(".globl {}\n", &name));
         riscv_code.push_str(&format!("{}:\n", &name));
