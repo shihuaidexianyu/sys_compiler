@@ -24,7 +24,7 @@ fn main() {
     let output = &args[4]; // 输出文件路径; args[3] 是 "-o",不用管
     // tip: 切分参数是由shell 完成的，-只是用来表示选项；他实际上和输入输出文件名是同级的参数，-o 只是一个标记，告诉程序下一个参数是输出文件名
     let input = fs::read_to_string(input).expect("无法读取输入文件");
-    // 先验证 lexer: 把切出来的 token 全打印出来
+    // 先进行词法分析,非法输入会由 lexer 直接 panic。
     let tokens = lexer::lex(&input);
     // grammar: &tokens 是借用着遍历,循环结束 tokens 还活着(下面 parse 还要用)
     // for t in &tokens {
