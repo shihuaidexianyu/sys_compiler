@@ -65,11 +65,36 @@ pub enum Stmt {
 
 /*
 Stmt        ::= "return" Exp ";";
-Exp         ::= UnaryExp;
+Exp         ::= LOrExp;
 PrimaryExp  ::= "(" Exp ")" | Number;
 Number      ::= INT_CONST;
 UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
 UnaryOp     ::= "+" | "-" | "!";
+
+表达式解析路径与优先级(从解析入口一路向下):
+
+Exp
+└── LOrExp        处理 ||
+    └── LAndExp   处理 &&
+        └── EqExp     处理 ==、!=
+            └── RelExp    处理 <、>、<=、>=
+                └── AddExp    处理 +、-
+                    └── MulExp    处理 *、/、%
+                        └── UnaryExp  处理一元 +、-、!
+                            └── PrimaryExp  处理数字和括号
+
+越靠近下面的层级,优先级越高;越靠近 Exp 入口,优先级越低。
+parser 会先让下层返回已经组装好的子树,再由上层消费自己的运算符。
+因此 1 + 2 * 3 会先由 MulExp 构造 2 * 3,再由 AddExp 构造外层的 +:
+
+AddExp(+)
+├── Number(1)
+└── MulExp(*)
+    ├── Number(2)
+    └── Number(3)
+
+同一层的二元运算符优先级相同,parser 用循环从左到右包裹旧节点,所以是左结合。
+PrimaryExp 遇到 "(" 时重新调用 Exp,因此括号内的表达式会独立形成一棵子树。
 */
 
 #[derive(Debug)]
