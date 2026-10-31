@@ -37,12 +37,12 @@ pub enum TokenKind {
     LogicalOr,
 
     // 分隔符
-    LParen,
-    RParen,
-    LBracket,
-    RBracket,
-    LBrace,
-    RBrace,
+    LeftParenthesis,
+    RightParenthesis,
+    LeftBracket,
+    RightBracket,
+    LeftBrace,
+    RightBrace,
     Comma,
     Semicolon,
 }
@@ -259,27 +259,27 @@ pub fn lex(input: &str) -> Vec<Token> {
             }
             '(' => {
                 chars.next();
-                TokenKind::LParen
+                TokenKind::LeftParenthesis
             }
             ')' => {
                 chars.next();
-                TokenKind::RParen
+                TokenKind::RightParenthesis
             }
             '[' => {
                 chars.next();
-                TokenKind::LBracket
+                TokenKind::LeftBracket
             }
             ']' => {
                 chars.next();
-                TokenKind::RBracket
+                TokenKind::RightBracket
             }
             '{' => {
                 chars.next();
-                TokenKind::LBrace
+                TokenKind::LeftBrace
             }
             '}' => {
                 chars.next();
-                TokenKind::RBrace
+                TokenKind::RightBrace
             }
             ',' => {
                 chars.next();

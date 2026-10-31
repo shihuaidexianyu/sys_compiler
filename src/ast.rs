@@ -18,6 +18,17 @@
 //   有一项字段没实现就 derive 失败; 清单里每个 trait 独立检查(字段们既要都会 Debug 也要都会 Clone)
 //   i32/String/Vec 等标准库类型基本都实现了常用 trait,只有自定义类型才要自己加
 
+/*
+CompUnit  ::= FuncDef;
+
+FuncDef   ::= FuncType IDENT "(" ")" Block;
+FuncType  ::= "int";
+
+Block     ::= "{" Stmt "}";
+Stmt      ::= "return" Number ";";
+Number    ::= INT_CONST;
+*/
+
 // 编译单元 = 一个函数定义
 // grammar: derive(Debug) 自动生成 Debug 实现,main 里 println!("{:?}") 才能打印
 #[derive(Debug)]
@@ -52,9 +63,21 @@ pub enum Stmt {
     Return(Exp), // Number 拍平: return 后面就一个数,直接存值
 }
 
+/*
+Stmt        ::= "return" Exp ";";
+Exp         ::= UnaryExp;
+PrimaryExp  ::= "(" Exp ")" | Number;
+Number      ::= INT_CONST;
+UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
+UnaryOp     ::= "+" | "-" | "!";
+*/
+
 #[derive(Debug)]
 pub enum Exp {
     UnaryExp(UnaryExp),
+    MulExp(Box<MulExp>),
+    AddExp(Box<AddExp>),
+    LOrExp(Box<LOrExp>),
 }
 
 #[derive(Debug)]
@@ -77,21 +100,83 @@ pub enum UnaryOp {
 }
 
 /*
-CompUnit  ::= FuncDef;
-
-FuncDef   ::= FuncType IDENT "(" ")" Block;
-FuncType  ::= "int";
-
-Block     ::= "{" Stmt "}";
-Stmt      ::= "return" Number ";";
-Number    ::= INT_CONST;
+Exp         ::= AddExp;
+PrimaryExp  ::= ...;
+Number      ::= ...;
+UnaryExp    ::= ...;
+UnaryOp     ::= ...;
+MulExp      ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
+AddExp      ::= MulExp | AddExp ("+" | "-") MulExp;
 */
+
+#[derive(Debug)]
+pub enum MulExp {
+    UnaryExp(UnaryExp),
+    MulExp(Box<MulExp>, MulOp, UnaryExp),
+}
+
+#[derive(Debug)]
+pub enum MulOp {
+    Star,
+    Slash,
+    Percent,
+}
+
+#[derive(Debug)]
+pub enum AddExp {
+    MulExp(MulExp),
+    AddExp(Box<AddExp>, AddOp, MulExp),
+}
+
+#[derive(Debug)]
+pub enum AddOp {
+    Plus,
+    Minus,
+}
 
 /*
-Stmt        ::= "return" Exp ";";
-Exp         ::= UnaryExp;
-PrimaryExp  ::= "(" Exp ")" | Number;
-Number      ::= INT_CONST;
-UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
-UnaryOp     ::= "+" | "-" | "!";
+Exp         ::= LOrExp;
+PrimaryExp  ::= ...;
+Number      ::= ...;
+UnaryExp    ::= ...;
+UnaryOp     ::= ...;
+MulExp      ::= ...;
+AddExp      ::= ...;
+RelExp      ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
+EqExp       ::= RelExp | EqExp ("==" | "!=") RelExp;
+LAndExp     ::= EqExp | LAndExp "&&" EqExp;
+LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
 */
+
+#[derive(Debug)]
+pub enum RelExp {
+    AddExp(AddExp),
+    RelExp(Box<RelExp>, RelOp, AddExp),
+}
+#[derive(Debug)]
+pub enum RelOp {
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+}
+#[derive(Debug)]
+pub enum EqExp {
+    RelExp(RelExp),
+    EqExp(Box<EqExp>, EqOp, RelExp),
+}
+#[derive(Debug)]
+pub enum EqOp {
+    Equal,
+    NotEqual,
+}
+#[derive(Debug)]
+pub enum LAndExp {
+    EqExp(EqExp),
+    LAndExp(Box<LAndExp>, EqExp),
+}
+#[derive(Debug)]
+pub enum LOrExp {
+    LAndExp(LAndExp),
+    LOrExp(Box<LOrExp>, LAndExp),
+}

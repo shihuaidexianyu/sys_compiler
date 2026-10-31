@@ -47,8 +47,8 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Int); // FuncType ::= "int"
         // expect 只还回借用 &Token,想要 String 本体得 clone 复制一份(所有权问题)
         let ident = self.expect(TokenKind::Ident).text.clone();
-        self.expect(TokenKind::LParen);
-        self.expect(TokenKind::RParen);
+        self.expect(TokenKind::LeftParenthesis);
+        self.expect(TokenKind::RightParenthesis);
         let block = self.block();
         FuncDef {
             func_type: FuncType::Int,
@@ -58,9 +58,9 @@ impl<'a> Parser<'a> {
     }
 
     fn block(&mut self) -> Block {
-        self.expect(TokenKind::LBrace);
+        self.expect(TokenKind::LeftBrace);
         let stmt = self.stmt();
-        self.expect(TokenKind::RBrace);
+        self.expect(TokenKind::RightBrace);
         Block { stmt } // 同样的简写,等价于 Block { stmt: stmt }
     }
     // tip: t是通配符,匹配所有类型的 token,所以可以用来做错误处理
