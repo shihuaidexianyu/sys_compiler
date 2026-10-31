@@ -20,31 +20,31 @@ pub enum TokenKind {
     Number(i32),
 
     // 运算符
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    Bang,
-    Assign,
-    Equal,
-    NotEqual,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    LogicalAnd,
-    LogicalOr,
+    Plus,         // +
+    Minus,        // -
+    Star,         // *
+    Slash,        // /
+    Percent,      // %
+    Bang,         // !
+    Assign,       // =
+    Equal,        // ==
+    NotEqual,     // !=
+    Less,         // <
+    LessEqual,    // <=
+    Greater,      // >
+    GreaterEqual, // >=
+    LogicalAnd,   // &&
+    LogicalOr,    // ||
 
     // 分隔符
-    LeftParenthesis,
-    RightParenthesis,
-    LeftBracket,
-    RightBracket,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Semicolon,
+    LeftParenthesis,  // (
+    RightParenthesis, // )
+    LeftBracket,      // [
+    RightBracket,     // ]
+    LeftBrace,        // {
+    RightBrace,       // }
+    Comma,            // ,
+    Semicolon,        // ;
 }
 
 #[derive(Debug, Clone)]

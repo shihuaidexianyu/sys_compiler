@@ -67,17 +67,121 @@ impl<'a> Parser<'a> {
     // 区别于_,是因为_没法访问对应的 token,而 t 可以访问 token 的 kind 和 text
     fn stmt(&mut self) -> Stmt {
         self.expect(TokenKind::Return);
-        let value = match self.bump() {
-            // grammar: 结构体解构 + 枚举模式嵌套,要求 kind 是 Number 并把数值抓出来叫 n
-            // .. 表示「其余字段(这里的 text)我不关心」
-            Token {
-                kind: TokenKind::Number(n),
-                ..
-            } => *n, // 隔着引用匹配出来的 n 是 &i32,加 * 取数字本体
-            t => panic!("期望整型常量,实际是 {:?}", t.kind),
-        };
+        let exp = self.exp();
         self.expect(TokenKind::Semicolon);
-        Stmt::Return(value)
+        Stmt::Return(exp)
+    }
+    fn exp(&mut self) -> Exp {
+        Exp::LOrExp(Box::new(self.l_or_exp()))
+    }
+    fn l_or_exp(&mut self) -> LOrExp {
+        // 即使没有 ||,也要把 LAndExp 包装成 LOrExp。
+        let mut node = LOrExp::LAndExp(self.l_and_exp());
+
+        while let Some(t) = self.peek() {
+            if t.kind == TokenKind::LogicalOr {
+                self.bump(); // 消费 ||
+                let rhs = self.l_and_exp();
+
+                // 把之前的表达式作为左操作数,实现左结合。
+                node = LOrExp::LOrExp(Box::new(node), rhs);
+            } else {
+                break;
+            }
+        }
+        node
+    }
+
+    fn l_and_exp(&mut self) -> LAndExp {
+        let mut node = self.equality_exp();
+        while let Some(t) = self.peek() {
+            if t.kind == TokenKind::LogicalAnd {
+                self.bump();
+                let rhs = self.equality_exp();
+                node = LAndExp::LAndExp(Box::new(node), rhs)
+            } else {
+                break;
+            }
+        }
+        node
+    }
+
+    fn equality_exp(&mut self) -> EqExp {
+        let mut node = self.relational_exp();
+        while let Some(t) = self.peek() {
+            if t.kind == TokenKind::Equal || t.kind == TokenKind::NotEqual {
+                let op = if t.kind == TokenKind::Equal {
+                    EqOp::Equal
+                } else {
+                    EqOp::NotEqual
+                };
+                self.bump();
+                let rhs = self.relational_exp();
+                node = EqExp::EqExp(Box::new(node), op, rhs);
+            } else {
+                break;
+            }
+        }
+        node
+    }
+    fn relational_exp(&mut self) -> RelExp {
+        let mut node = self.add_exp();
+        while let Some(t) = self.peek() {
+            let op = match t.kind {
+                TokenKind::Less => RelOp::Less,
+                TokenKind::LessEqual => RelOp::LessEqual,
+                TokenKind::Greater => RelOp::Greater,
+                TokenKind::GreaterEqual => RelOp::GreaterEqual,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.add_exp();
+            node = RelExp::RelExp(Box::new(node), op, rhs);
+        }
+        node
+    }
+    fn add_exp(&mut self) -> AddExp {
+        let mut node = self.mul_exp();
+        while let Some(t) = self.peek() {
+            let op = match t.kind {
+                TokenKind::Plus => BinaryOp::Add,
+                TokenKind::Minus => BinaryOp::Sub,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.mul_exp();
+            node = AddExp::BinaryOp(Box::new(node), op, Box::new(rhs));
+        }
+        node
+    }
+    fn mul_exp(&mut self) -> MulExp {
+        let mut node = self.unary_exp();
+        while let Some(t) = self.peek() {
+            let op = match t.kind {
+                TokenKind::Star => BinaryOp::Mul,
+                TokenKind::Slash => BinaryOp::Div,
+                TokenKind::Percent => BinaryOp::Mod,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.unary_exp();
+            node = MulExp::BinaryOp(Box::new(node), op, Box::new(rhs));
+        }
+        node
+    }
+    fn unary_exp(&mut self) -> UnaryExp {
+        let mut node = self.primary_exp();
+        while let Some(t) = self.peek() {
+            let op = match t.kind {
+                TokenKind::Plus => UnaryOp::Plus,
+                TokenKind::Minus => UnaryOp::Minus,
+                TokenKind::Bang => UnaryOp::Bang,
+                _ => break,
+            };
+            self.bump();
+            node = UnaryExp::UnaryOp(op, Box::new(node));
+        }
+        node
     }
 }
 
