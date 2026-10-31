@@ -37,12 +37,15 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // EBNF: CompUnit ::= FuncDef;
     fn comp_unit(&mut self) -> CompUnit {
         CompUnit {
             func_def: self.func_def(),
         }
     }
 
+    // EBNF: FuncDef  ::= FuncType IDENT "(" ")" Block;
+    // EBNF: FuncType ::= "int";
     fn func_def(&mut self) -> FuncDef {
         self.expect(TokenKind::Int); // FuncType ::= "int"
         // expect 只还回借用 &Token,想要 String 本体得 clone 复制一份(所有权问题)
@@ -57,23 +60,30 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // EBNF: Block ::= "{" Stmt "}";
     fn block(&mut self) -> Block {
         self.expect(TokenKind::LeftBrace);
         let stmt = self.stmt();
         self.expect(TokenKind::RightBrace);
         Block { stmt } // 同样的简写,等价于 Block { stmt: stmt }
     }
+
     // tip: t是通配符,匹配所有类型的 token,所以可以用来做错误处理
     // 区别于_,是因为_没法访问对应的 token,而 t 可以访问 token 的 kind 和 text
+    // EBNF: Stmt ::= "return" Exp ";";
     fn stmt(&mut self) -> Stmt {
         self.expect(TokenKind::Return);
         let exp = self.exp();
         self.expect(TokenKind::Semicolon);
         Stmt::Return(exp)
     }
+
+    // EBNF: Exp ::= LOrExp;
     fn exp(&mut self) -> Exp {
         Exp::LOrExp(Box::new(self.l_or_exp()))
     }
+
+    // EBNF: LOrExp ::= LAndExp | LOrExp "||" LAndExp;
     fn l_or_exp(&mut self) -> LOrExp {
         // 即使没有 ||,也要把 LAndExp 包装成 LOrExp。
         let mut node = LOrExp::LAndExp(self.l_and_exp());
@@ -92,13 +102,14 @@ impl<'a> Parser<'a> {
         node
     }
 
+    // EBNF: LAndExp ::= EqExp | LAndExp "&&" EqExp;
     fn l_and_exp(&mut self) -> LAndExp {
-        let mut node = self.equality_exp();
+        let mut node = LAndExp::EqExp(self.equality_exp());
         while let Some(t) = self.peek() {
             if t.kind == TokenKind::LogicalAnd {
                 self.bump();
                 let rhs = self.equality_exp();
-                node = LAndExp::LAndExp(Box::new(node), rhs)
+                node = LAndExp::LAndExp(Box::new(node), rhs);
             } else {
                 break;
             }
@@ -106,26 +117,25 @@ impl<'a> Parser<'a> {
         node
     }
 
+    // EBNF: EqExp ::= RelExp | EqExp ("==" | "!=") RelExp;
     fn equality_exp(&mut self) -> EqExp {
-        let mut node = self.relational_exp();
+        let mut node = EqExp::RelExp(self.relational_exp());
         while let Some(t) = self.peek() {
-            if t.kind == TokenKind::Equal || t.kind == TokenKind::NotEqual {
-                let op = if t.kind == TokenKind::Equal {
-                    EqOp::Equal
-                } else {
-                    EqOp::NotEqual
-                };
-                self.bump();
-                let rhs = self.relational_exp();
-                node = EqExp::EqExp(Box::new(node), op, rhs);
-            } else {
-                break;
-            }
+            let op = match t.kind {
+                TokenKind::Equal => EqOp::Equal,
+                TokenKind::NotEqual => EqOp::NotEqual,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.relational_exp();
+            node = EqExp::EqExp(Box::new(node), op, rhs);
         }
         node
     }
+
+    // EBNF: RelExp ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
     fn relational_exp(&mut self) -> RelExp {
-        let mut node = self.add_exp();
+        let mut node = RelExp::AddExp(self.add_exp());
         while let Some(t) = self.peek() {
             let op = match t.kind {
                 TokenKind::Less => RelOp::Less,
@@ -140,48 +150,81 @@ impl<'a> Parser<'a> {
         }
         node
     }
+
+    // EBNF: AddExp ::= MulExp | AddExp ("+" | "-") MulExp;
     fn add_exp(&mut self) -> AddExp {
-        let mut node = self.mul_exp();
+        let mut node = AddExp::MulExp(self.mul_exp());
         while let Some(t) = self.peek() {
             let op = match t.kind {
-                TokenKind::Plus => BinaryOp::Add,
-                TokenKind::Minus => BinaryOp::Sub,
+                TokenKind::Plus => AddOp::Plus,
+                TokenKind::Minus => AddOp::Minus,
                 _ => break,
             };
             self.bump();
             let rhs = self.mul_exp();
-            node = AddExp::BinaryOp(Box::new(node), op, Box::new(rhs));
+            node = AddExp::AddExp(Box::new(node), op, rhs);
         }
         node
     }
+
+    // EBNF: MulExp ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
     fn mul_exp(&mut self) -> MulExp {
-        let mut node = self.unary_exp();
+        let mut node = MulExp::UnaryExp(self.unary_exp());
         while let Some(t) = self.peek() {
             let op = match t.kind {
-                TokenKind::Star => BinaryOp::Mul,
-                TokenKind::Slash => BinaryOp::Div,
-                TokenKind::Percent => BinaryOp::Mod,
+                TokenKind::Star => MulOp::Star,
+                TokenKind::Slash => MulOp::Slash,
+                TokenKind::Percent => MulOp::Percent,
                 _ => break,
             };
             self.bump();
             let rhs = self.unary_exp();
-            node = MulExp::BinaryOp(Box::new(node), op, Box::new(rhs));
+            node = MulExp::MulExp(Box::new(node), op, rhs);
         }
         node
     }
+
+    // EBNF: UnaryExp ::= PrimaryExp | UnaryOp UnaryExp;
+    // EBNF: UnaryOp  ::= "+" | "-" | "!";
     fn unary_exp(&mut self) -> UnaryExp {
-        let mut node = self.primary_exp();
-        while let Some(t) = self.peek() {
-            let op = match t.kind {
-                TokenKind::Plus => UnaryOp::Plus,
-                TokenKind::Minus => UnaryOp::Minus,
-                TokenKind::Bang => UnaryOp::Bang,
-                _ => break,
-            };
-            self.bump();
-            node = UnaryExp::UnaryOp(op, Box::new(node));
+        // 一元运算符在表达式前面,所以先检查运算符,再递归解析后面的 UnaryExp。
+        let op = match self.peek() {
+            Some(Token {
+                kind: TokenKind::Plus,
+                ..
+            }) => UnaryOp::Plus,
+            Some(Token {
+                kind: TokenKind::Minus,
+                ..
+            }) => UnaryOp::Minus,
+            Some(Token {
+                kind: TokenKind::Bang,
+                ..
+            }) => UnaryOp::Bang,
+            _ => return UnaryExp::PrimaryExp(self.primary_exp()),
+        };
+        self.bump();
+        UnaryExp::UnaryOp(op, Box::new(self.unary_exp()))
+    }
+
+    // EBNF: PrimaryExp ::= "(" Exp ")" | Number;
+    // EBNF: Number     ::= INT_CONST;
+    fn primary_exp(&mut self) -> PrimaryExp {
+        match self.bump() {
+            Token {
+                kind: TokenKind::Number(n),
+                ..
+            } => PrimaryExp::Number(*n),
+            Token {
+                kind: TokenKind::LeftParenthesis,
+                ..
+            } => {
+                let exp = self.exp();
+                self.expect(TokenKind::RightParenthesis);
+                PrimaryExp::Exp(Box::new(exp))
+            }
+            t => panic!("期望数字或括号表达式,实际是 {:?}", t.kind),
         }
-        node
     }
 }
 
