@@ -30,7 +30,8 @@ pub fn gen_stmt_ir(stmt: &ast::Stmt) -> String {
     match stmt {
         ast::Stmt::Return(value) => {
             // 生成 return 语句的 IR
-            format!("  ret {}\n", value)
+            // grammar：使用 {:?} 来打印 Debug trait 的实现，如果是{},则会使用 Display trait 的实现
+            format!("  ret {:?}\n", value)
         }
     }
 }

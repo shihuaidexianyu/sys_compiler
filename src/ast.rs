@@ -49,5 +49,49 @@ pub struct Block {
 // Lv2 起会往这里塞赋值、if、while…… 枚举一分支一个
 #[derive(Debug)]
 pub enum Stmt {
-    Return(i32), // Number 拍平: return 后面就一个数,直接存值
+    Return(Exp), // Number 拍平: return 后面就一个数,直接存值
 }
+
+#[derive(Debug)]
+pub enum Exp {
+    UnaryExp(UnaryExp),
+}
+
+#[derive(Debug)]
+pub enum PrimaryExp {
+    Exp(Box<Exp>), // "(" Exp ")"
+    Number(i32),   // INT_CONST
+}
+
+#[derive(Debug)]
+pub enum UnaryExp {
+    PrimaryExp(PrimaryExp),
+    UnaryOp(UnaryOp, Box<UnaryExp>),
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    Plus,
+    Minus,
+    Bang,
+}
+
+/*
+CompUnit  ::= FuncDef;
+
+FuncDef   ::= FuncType IDENT "(" ")" Block;
+FuncType  ::= "int";
+
+Block     ::= "{" Stmt "}";
+Stmt      ::= "return" Number ";";
+Number    ::= INT_CONST;
+*/
+
+/*
+Stmt        ::= "return" Exp ";";
+Exp         ::= UnaryExp;
+PrimaryExp  ::= "(" Exp ")" | Number;
+Number      ::= INT_CONST;
+UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
+UnaryOp     ::= "+" | "-" | "!";
+*/
